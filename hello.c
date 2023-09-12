@@ -8,6 +8,7 @@
 // MPI_Comm_rank, MPI_Finalize, and MPI_Get_processor_name.
 //
 #include <mpi.h> // Library needed
+#include <unistd.h> // sleep function
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
     // We can start to do "operations"
 
     // Comm_size: Determines the size of the group associated with a communicator 
-    // comm means communicator, so the size of the group would be the number of processes using by a communicator -> NOT SURE
+    // comm means communicator. The size of the group (associated with a communicator) would be the number of processes in that communicator
 
     // Get the number of processors
     int world_size;
@@ -55,15 +56,15 @@ int main(int argc, char** argv) {
             processor_name, world_rank, world_size);
 
     // allows the calling thread/program to pause its execution for a specified number of seconds.
-    if(world_rank == 0) // why world_rank == 0 need to rest??? -> NOT SURE
+    if(world_rank == 0){ // waits while the other processes catch up or perform necessary computations.
         sleep(10);
+    }        
 
     // Blocks until all processes in the communicator have reached this routine. 
     MPI_Barrier(MPI_COMM_WORLD); 
     printf("Finalizing process %d out of %d processors\n", world_rank, world_size);
 
     int number = 20;
-
 
     // MPI_Send: send a message to a particular process within an MPI communicator
     // a buffer is temporary storage we use when one component feeds data to the other, but their speeds aren’t the same
@@ -84,7 +85,7 @@ int main(int argc, char** argv) {
     */
 
     // Send a message to a particular process
-    MPI_SSend(&number, 1, MPI_INT, 1-world_rank, 0, MPI_COMM_WORLD);
+    MPI_Ssend(&number, 1, MPI_INT, world_rank, 0, MPI_COMM_WORLD); // send it to yourself 
     /*
         &number: 
             This is the starting address of the data you want to send
@@ -94,12 +95,35 @@ int main(int argc, char** argv) {
             This is the tag for the message. Tags are useful for distinguishing different types of messages.
         
     */
-   /*MPI_SSend(): This is a synchronous send operation. It will block (i.e., not return) until the receiving process has started its matching receive. 
-   This ensures that once MPI_SSend() returns, the communication has effectively begun and the send buffer can be safely reused. */
+    /*MPI_SSend(): This is a synchronous send operation. It will block (i.e., not return) until the receiving process has started its matching receive. 
+    This ensures that once MPI_SSend() returns, the communication has effectively begun and the send buffer can be safely reused. */
 
 
+    // MPI_Recv: Blocking receive for a message 
+    // int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status)
 
-    MPI_Recv(&number, 1, MPI_INT, 1-world_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    /* Output:
+        buf
+            initial address of receive buffer (choice) 
+        status
+            status object (Status) 
+    */
+
+    /* Input:
+        count
+            maximum number of elements in receive buffer (integer) 
+        datatype
+            datatype of each receive buffer element (handle) 
+        source
+            rank of source (integer) 
+        tag
+            message tag (integer) 
+        comm
+            communicator (handle) 
+    */
+    MPI_Recv(&number, 1, MPI_INT, world_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    // Print the operation
     printf("Process %d received number %d from other process\n", world_rank, number);
 
     // Finalize the MPI environment. No more MPI calls can be made after this
